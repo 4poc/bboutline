@@ -1,0 +1,171 @@
+<project name="bboutline" default="main">
+    <property environment="env" />
+    <!-- Properties -->
+
+    <dirname property="imported.basedir" file="${ant.file.bboutline}" />
+    <property name="build.dir" value="build" />
+    <property name="src.dir" value="${imported.basedir}" />
+
+    <property name="resources.dir" value="${imported.basedir}/resources" />
+
+    <property name="forge_src.dir" value="src" />
+
+    <property name="forge_classes.dir" value="${build.dir}/forge_classes"/>
+    <property name="jar.dir" value="packages"/>
+
+    <!-- used to download forge & mcp into -->
+    <property name="download.dir" value="download" />
+
+    <!-- used to copy assets from before forge setup -->
+    <property name="mc.assets" value="${user.home}/.minecraft/assets" />
+
+    <property name="forge.dir" value="${build.dir}/forge" />
+    <property name="forge_mcp.dir" value="${forge.dir}/mcp" />
+    <property name="forge_mcp_src.dir" value="${forge_mcp.dir}/src" />
+
+    <!-- setup versions -->
+    <property name="bboutline.version" value="0.8" />
+    <property name="mc.version" value="1.6.1" />
+    <property name="mcp.version" value="803" />
+    <property name="forge.version" value="8.9.0.775" />
+
+    <property name="mcp.filename" value="mcp${mcp.version}.zip" />
+    <property name="forge.filename" value="minecraftforge-src-${mc.version}-${forge.version}.zip" />
+
+    <available property="mcp-exists" file="${download.dir}/${mcp.filename}" />
+    <available property="forge-exists" file="${download.dir}/${forge.filename}" />
+    <available property="mc-assets-exists" file="${mc.assets}" />
+
+    <condition property="mcp-out-of-date">
+        <not>
+            <and>
+                <isset property="mcp-exists" />
+                <available file="${mcp.dir}" />
+            </and>
+        </not>
+    </condition>
+    <condition property="forge-out-of-date">
+        <not>
+            <and>
+                <isset property="forge-exists" />
+                <available file="${forge_mcp_src.dir}" />
+            </and>
+        </not>
+    </condition>
+
+
+
+    <mkdir dir="${download.dir}" />
+
+
+    <!-- Clear build directory -->
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <!-- download mcp and forge -->
+    <target name="download-files" depends="download-forge,download-mcp" />
+    <target name="download-mcp" unless="mcp-exists">
+        <get src="http://mcp.ocean-labs.de/files/${mcp.filename}" dest="${download.dir}" usetimestamp="True" />
+    </target>
+    <target name="download-forge" unless="forge-exists">
+        <get src="http://files.minecraftforge.net/${forge.filename}" dest="${download.dir}" usetimestamp="True" />
+    </target>
+
+    <!-- setup mcp & forge -->
+    <target name="setup" depends="download-files,unzip-forge,copy-assets-forge,setup-forge" />
+    <target name="unzip-forge" if="forge-out-of-date">
+        <delete dir="${forge.dir}" failonerror="false" />
+        <unzip dest="${forge.dir}/.." src="${download.dir}/${forge.filename}" />
+        <mkdir dir="${forge_mcp.dir}" />
+        <unzip dest="${forge_mcp.dir}" src="${download.dir}/${mcp.filename}" />
+        <chmod dir="${forge.dir}" perm="ugo+rx" includes="**.sh" />
+    </target>
+    <!-- copy jars/assets workaround -->
+    <target name="copy-assets-forge" depends="unzip-forge" if="mc-assets-exists">
+        <echo>copy assets: ${forge_mcp.dir}/jars/assets</echo>
+        <mkdir dir="${forge_mcp.dir}/jars/assets" />
+        <copy todir="${forge_mcp.dir}/jars/assets">
+            <fileset dir="${mc.assets}" />
+        </copy>
+    </target>
+    <target name="setup-forge" depends="copy-assets-forge" if="forge-out-of-date">
+        <!-- install forge -->
+        <exec dir="${forge.dir}" executable="sh" osfamily="unix" logError="true">
+            <arg value="install.sh"/>
+        </exec>
+    </target>
+
+    <!-- ****** forge ****** -->
+
+    <target name="forge-clean">
+        <delete verbose="true">
+            <fileset dir="${forge_mcp_src.dir}/minecraft">
+                <present present="both" targetdir="${forge_src.dir}" />
+            </fileset>
+        </delete>
+        <!-- cleanup reobf directory -->
+        <delete verbose="true">
+            <fileset dir="${forge_mcp.dir}/reobf" />
+        </delete>
+    </target>
+
+    <target name="forge-copy-src" depends="forge-clean">
+        <!-- copy sources -->
+        <copy todir="${forge_mcp_src.dir}/minecraft" verbose="true">
+            <fileset dir="${forge_src.dir}" />
+            <filterset>
+                <filter token="VERSION" value="${bboutline.version}" />
+            </filterset>
+        </copy>
+    </target>
+    
+    <target name="forge-compile" depends="setup,forge-copy-src">
+        <!-- recompile -->
+        <exec dir="${forge_mcp.dir}" executable="sh" osfamily="unix">
+            <arg value="recompile.sh" />
+        </exec>
+
+        <!-- check for failure -->
+        <fail message="MCP failed to build">
+            <condition>
+                <resourcecontains resource="${forge_mcp.dir}/logs/client_compile.log" substring="error:" />
+            </condition>
+        </fail>
+    </target>
+    
+    <target name="forge-reobf" depends="forge-compile">
+        <!-- reobfuscate -->
+        <exec dir="${forge_mcp.dir}" executable="sh" osfamily="unix">
+            <arg value="reobfuscate_srg.sh" />
+        </exec>
+    </target>
+
+    <!-- create forge package -->
+    <target name="forge-package" depends="forge-reobf">
+        <mkdir dir="${forge_classes.dir}" />
+
+        <delete includeemptydirs="true">
+            <fileset dir="${forge_classes.dir}" includes="**/*" />
+        </delete>
+
+        <!-- copy classes -->
+        <copy todir="${forge_classes.dir}">
+            <fileset dir="${forge_mcp.dir}/reobf/minecraft" />
+        </copy>
+
+        <!-- copy resources -->
+        <copy todir="${forge_classes.dir}">
+            <fileset dir="${resources.dir}" />
+            <filterset>
+                <filter token="VERSION" value="${bboutline.version}" />
+            </filterset>
+        </copy>
+        
+        <mkdir dir="${jar.dir}" />
+
+        <jar destfile="${jar.dir}/bboutline-v${bboutline.version}-${mc.version}-${forge.version}-forge.zip" basedir="${forge_classes.dir}" />
+    </target>
+    
+    <target name="main" depends="forge-package" />
+</project>

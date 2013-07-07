@@ -1,0 +1,22 @@
+[
+{
+  "modid": "BBOutlineMod",
+  "name": "BBox Outline Mod",
+  "description": "Shows the bounding boxes of nether fortresses.",
+  "version": "@VERSION@",
+  "mcversion": "",
+  "url": "http://www.minecraftforum.net/topic/1538820-bounding-box-outline/",
+  "updateUrl": "",
+  "authors": [
+    "4poc"
+  ],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [
+  ],
+  "parent":"",
+  "dependencies": [
+  ]
+}
+]    
+
