@@ -1,5 +1,10 @@
 <project name="bboutline" default="main">
     <property environment="env" />
+    
+    <condition property="build_number" value="-${env.BUILD_NUMBER}" else="">
+        <isset property="env.BUILD_NUMBER" />
+    </condition>
+    
     <!-- Properties -->
 
     <dirname property="imported.basedir" file="${ant.file.bboutline}" />
@@ -27,7 +32,7 @@
     <property name="bboutline.version" value="0.9" />
     <property name="mc.version" value="1.6.2" />
     <property name="mcp.version" value="804" />
-    <property name="forge.version" value="9.10.0.776" />
+    <property name="forge.version" value="9.10.0.789" />
 
     <property name="mcp.filename" value="mcp${mcp.version}.zip" />
     <property name="forge.filename" value="minecraftforge-src-${mc.version}-${forge.version}.zip" />
@@ -115,7 +120,7 @@
         <copy todir="${forge_mcp_src.dir}/minecraft" verbose="true">
             <fileset dir="${forge_src.dir}" />
             <filterset>
-                <filter token="VERSION" value="${bboutline.version}" />
+                <filter token="VERSION" value="${bboutline.version}${build_number}" />
             </filterset>
         </copy>
     </target>
@@ -158,13 +163,13 @@
         <copy todir="${forge_classes.dir}">
             <fileset dir="${resources.dir}" />
             <filterset>
-                <filter token="VERSION" value="${bboutline.version}" />
+                <filter token="VERSION" value="${bboutline.version}${build_number}" />
             </filterset>
         </copy>
         
         <mkdir dir="${jar.dir}" />
 
-        <jar destfile="${jar.dir}/bboutline-v${bboutline.version}-${mc.version}-${forge.version}-forge.zip" basedir="${forge_classes.dir}" />
+        <jar destfile="${jar.dir}/bboutline-v${bboutline.version}${build_number}-${mc.version}-${forge.version}-forge.zip" basedir="${forge_classes.dir}" />
     </target>
     
     <target name="main" depends="forge-package" />
