@@ -147,7 +147,7 @@ public class BBoxCache {
         return (Map<ChunkCoordIntPair, StructureStart>) 
                 ReflectionHelper.getPrivateValue(
                         MapGenStructure.class, 
-                        mapGenStructure, 0);
+                        mapGenStructure, 1);
     }
 
     /**
