@@ -167,6 +167,9 @@
             </filterset>
         </copy>
         
+        <delete includeemptydirs="true">
+            <fileset dir="${jar.dir}" includes="**/*" />
+        </delete>
         <mkdir dir="${jar.dir}" />
 
         <jar destfile="${jar.dir}/bboutline-v${bboutline.version}${build_number}-${mc.version}-${forge.version}-forge.zip" basedir="${forge_classes.dir}" />
